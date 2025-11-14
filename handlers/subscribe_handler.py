@@ -92,7 +92,8 @@ async def choose_type(callback: MessageCallback):
     await callback.message.answer(prompts[sub_type])
 
 
-@subscribe_handler.message_created(F.message.body.text)
+@subscribe_handler.message_created(F.message.body.text & F.ctx.state.in_(
+    SubscribeStates.entering_name, SubscribeStates.choosing_from_list))
 async def process_name_or_number(event: MessageCreated):
     chat_id = event.message.recipient.chat_id
     ctx = get_context(chat_id)
