@@ -35,7 +35,7 @@ services:
 
   postgres:
     image: postgres:15
-    container_name: postgres
+    container_name: postgres_max
     restart: always
     environment:
       POSTGRES_USER: max_bot
