@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: max_bot
-    command: python -m bot.main
+    command: python -m main
     env_file:
       - .env
     volumes:

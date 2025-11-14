@@ -9,5 +9,6 @@ done
 echo "Running migrations"
 alembic upgrade head
 
-echo "Starting bot"
-exec python -m main
+echo "Starting process"
+
+exec "$@"
