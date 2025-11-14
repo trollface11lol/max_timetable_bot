@@ -173,5 +173,6 @@ async def process_name_or_number(event: MessageCreated):
 async def cancel_search(callback: MessageCallback):
     chat_id = callback.message.recipient.chat_id
     ctx = get_context(chat_id)
+    await callback.message.delete()
     await ctx.clear()
     await callback.message.answer("❌ Поиск отменен.")
