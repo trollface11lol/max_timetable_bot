@@ -13,7 +13,7 @@ services:
       - .:/app
     restart: unless-stopped
     depends_on:
-      - postgres
+      - postgres_max
     networks:
       - max_net
 
@@ -29,7 +29,7 @@ services:
       - .:/app
     restart: unless-stopped
     depends_on:
-      - postgres
+      - postgres_max
     networks:
       - max_net
 
