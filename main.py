@@ -36,7 +36,7 @@ async def main():
             BotCommand(name="today", description="Расписание на сегодня"),
             BotCommand(name="tomorrow", description="Расписание на завтра"),
             BotCommand(name="week", description="Расписание на неделю"),
-            BotCommand(name="subscriptions", description="Показать мои подписки"),
+            BotCommand(name="schedules", description="Показать мои подписки"),
             BotCommand(name="subscribe", description="Подписаться на группу / преподавателя / аудиторию"),
             BotCommand(name="unsubscribe", description="Отписаться от подписки"),
             BotCommand(name="daily", description="Управление ежедневной рассылкой"),
