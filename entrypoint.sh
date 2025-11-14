@@ -2,7 +2,7 @@
 set -e
 
 echo "Waiting for database"
-until pg_isready -h postgres -p 5432 -U max_bot; do
+until pg_isready -h postgres_max -p 5432 -U max_bot; do
   sleep 1
 done
 
