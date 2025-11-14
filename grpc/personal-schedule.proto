@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/type/dayofweek.proto";
+
+
+package rtu.schedule.api;
+
+// Сервис персонального расписания, позволяет подписываться на расписания и получать информацию об изменениях в них
+service PersonalScheduleService{
+    // Получение расписаний, на которые есть подписка
+    rpc GetSubscribedSchedules(GetSubscribedSchedulesRequest) returns (GetSubscribedSchedulesResponse);
+    // Обновление подписок на расписания
+    rpc UpdateSubscribedSchedules(UpdateSubscribedSchedulesRequest) returns (UpdateSubscribedSchedulesResponse);
+    // Получение обновлений по конкретному расписанию
+    rpc GetPersonalScheduleUpdates(GetPersonalScheduleUpdatesRequest) returns (GetPersonalScheduleUpdatesResponse);
+    // Принятие (отметка о прочтении) обновлений по расписанию
+    rpc AcceptScheduleUpdates(AcceptScheduleUpdatesRequest) returns (AcceptScheduleUpdatesResponse);
+    // Получение названия расписания
+    rpc GetScheduleTitle(GetScheduleTitleRequest) returns (GetScheduleTitleResponse);
+    // Получение полного расписания в схлопнутом виде
+    rpc GetWrappedSchedule(GetWrappedScheduleRequest) returns (GetWrappedScheduleResponse);
+}
+
+// Запрос на получение расписаний, на которые подписан пользователь
+message GetSubscribedSchedulesRequest{
+}
+
+// Ответ на получение расписаний, на которые подписан пользователь
+message GetSubscribedSchedulesResponse{
+    repeated ScheduleEntity schedules = 1; // Расписания, на которые подписан пользователь
+}
+// Составная id-шка для расписания (тип расписания и id объекта расписания)
+message ScheduleId{
+    ScheduleType schedule_type = 1; // Тип расписания
+    int32 schedule_id = 2; // Идентификатор объекта расписания
+}
+// Запрос на обновление подписок на расписания
+message UpdateSubscribedSchedulesRequest{
+    repeated ScheduleId schedule_id = 1; // Новый список подписок на расписания
+}
+// Ответ на обновление подписок на расписания
+message UpdateSubscribedSchedulesResponse{
+    UpdateSubscribedSchedulesResponseState state = 1; // Статус ответа
+    enum UpdateSubscribedSchedulesResponseState{
+        UPDATE_SUBSCRIBED_SCHEDULES_RESPONSE_UNKNOWN = 0; // Неизвестно
+        UPDATE_SUBSCRIBED_SCHEDULES_RESPONSE_OK = 1; // Ок
+    }
+}
+
+// Модель расписания, использующаяся в get запросе
+message ScheduleEntity{
+    ScheduleId schedule_id = 1; // Идентификатор расписания
+    string long_title = 2; // Длинное название
+    string short_title = 3; // Короткое название
+    bool is_updated = 4; // Есть ли обновления по этому расписанию
+}
+
+// Запрос на получение изменений в расписании
+message GetPersonalScheduleUpdatesRequest{
+    ScheduleId schedule_id = 1; // Идентификатор расписания, изменения по которому хочется увидеть
+}
+// Ответ на получение изменений в расписании
+message GetPersonalScheduleUpdatesResponse{
+    oneof result {
+        GetPersonalScheduleUpdatesResponseExists exists = 1; // Отличия успешно найдены
+        google.protobuf.Empty no_updates = 2; // Нет обновлений
+    }
+    string long_title = 3; // Длинное название
+    string short_title = 4; // Короткое название
+    // Успешный ответ на запрос
+    message GetPersonalScheduleUpdatesResponseExists{
+        repeated TimetableScheduleDiff timetable_diff = 1; // Изменения в повторяющихся занятиях
+        repeated EventDiff event_diff = 2; // Изменение в уникальных занятиях
+        string snapshot_id = 3; // Идентификатор актуального снапшота
+        google.protobuf.Timestamp previous_time = 4; // Время публикации предыдущего расписания
+        google.protobuf.Timestamp current_time = 5; // Время публикации актуального расписания
+    }
+}
+// Изменения в повторяющихся занятиях, сгруппированное по дню недели, времени занятия и четности
+message TimetableScheduleDiff{
+    TimeSlot time_slot = 1; // День недели, номер пары и четность недели, в которой проходит занятие
+    repeated DiffElement cells = 2; // Изменения в этом слоте
+    message DiffElement{
+        ScheduleStateTimetableLesson previous = 1; // Предыдущая версия
+        ScheduleStateTimetableLesson current = 2; // Текущая версия
+    }
+    // День недели, номер пары и четность недели, в которой проходит занятие
+    message TimeSlot{
+        google.type.DayOfWeek day_of_week = 1; // День недели
+        int32 number_in_day = 2; // Номер занятия в дне
+        WeekParity week_parity = 3; // Четность недели, в которой проходит это занятие
+    }
+}
+// Регулярная пара по расписанию
+message ScheduleStateTimetableLesson {
+    string discipline = 1; // Название дисциплины
+    google.protobuf.StringValue lesson_type = 2; // Тип занятия (может быть не указан)
+    repeated string groups = 3; // Группы, привязанные к занятию
+    repeated string teachers = 4; // Преподаватели, привязанные к занятию
+    repeated string auditoriums = 5; // Аудитории, в которых проходит занятие
+    ScheduleStateTimeDetails time_details = 6; // Информация о номерах недель, на которых занятие проводится
+    int32 begin_time = 7; // Время начала пары в минутах от начала дня
+    int32 end_time = 8; // Время конца пары в минутах от начала дня
+
+    // Информация о номерах недель, на которых занятие проводится
+    message ScheduleStateTimeDetails{
+        repeated int32 weeks_include = 1; // Номера недель, на которых занятие проводится
+        repeated int32 weeks_exclude = 2; // Номера недель, на которых занятие не проводится
+    }
+}
+// Отличия в расписании
+message EventDiff {
+    TimeSlot time_slot = 1; // Время проведения занятия
+    repeated DiffElement diff = 2; // Отличия в расписании
+    // Время проведения занятия
+    message TimeSlot {
+        google.protobuf.Timestamp start = 1; // Время начала занятия
+        google.protobuf.Timestamp end = 2; // Время завершения занятия
+    }
+    // Отличие в расписании
+    message DiffElement{
+        ScheduleStateLessonEvent previous = 1; // Предыдущая версия
+        ScheduleStateLessonEvent current = 2; // Текущая версия
+    }
+}
+// Уникальная пара (экзамен/зачет)
+message ScheduleStateLessonEvent{
+    string discipline = 3; // Название дисциплины
+    string lesson_type = 4; // Тип занятия
+    repeated string groups = 5; // Группы, привязанные к занятию
+    repeated string teachers = 6; // Преподаватели, привязанные к занятию
+    repeated string auditoriums = 7; // Аудитории, в которых проходит занятие
+}
+
+
+// Запрос на принятие (отметить просмотренными) изменения в расписании, на которое пользователь подписан
+message AcceptScheduleUpdatesRequest{
+    ScheduleId schedule_id = 1; // Идентификатор расписания
+    string snapshot_id = 2; // Идентификатор актуального снапшота, изменения по которому приняты
+}
+
+// Запрос на получения названия расписания
+message GetScheduleTitleRequest{
+    ScheduleId schedule_id = 1; // Идентификатор расписания, название которого хочется получить
+}
+
+// Ответ с названием расписания
+message GetScheduleTitleResponse{
+    string long_title = 1; // Длинное название
+    string short_title = 2; // Короткое название
+}
+
+// Ответ на принятие изменений в расписании
+message AcceptScheduleUpdatesResponse{
+    AcceptScheduleUpdatesResponseStatus status = 1; // Статус ответа
+    enum AcceptScheduleUpdatesResponseStatus {
+        ACCEPT_SCHEDULE_UPDATES_RESPONSE_STATUS_UNKNOWN = 0; // Неизвестно
+        ACCEPT_SCHEDULE_UPDATES_RESPONSE_STATUS_OK = 1; // Ок
+    }
+}
+
+// Тип расписания
+enum ScheduleType{
+    SCHEDULE_TYPE_UNKNOWN = 0; // Неизвестное
+    SCHEDULE_TYPE_GROUP = 1; // Группа
+    SCHEDULE_TYPE_TEACHER = 2; // Преподаватель
+    SCHEDULE_TYPE_AUDITORIUM = 3; // Аудитория
+}
+
+// Четность недели
+enum WeekParity{
+    WEEK_PARITY_UNKNOWN = 0; // Неизвестно
+    WEEK_PARITY_EVEN = 1; // По четным
+    WEEK_PARITY_ODD = 2; // По нечетным
+    WEEK_PARITY_WEEKLY = 3; // Каждую неделю
+}
+
+// Запрос на получение расписания в свернутом виде
+message GetWrappedScheduleRequest {
+    ScheduleId schedule_id = 1; // Идентификатор расписания
+}
+
+// Ответ на получение расписания в свернутом виде
+message GetWrappedScheduleResponse {
+    string long_title = 1; // Длинное название
+    string short_title = 2; // Короткое название
+    repeated GetWrappedScheduleEvent events = 3; // События в расписании
+}
+
+// Все занятия в одном временном отрезке
+message GetWrappedScheduleEvent {
+    TimeSlot time_slot = 1; // Время проведения занятия
+    repeated ScheduleStateTimetableLesson lessons = 2; // Занятия в тайм слоте
+
+    message TimeSlot{
+        google.type.DayOfWeek day_of_week = 1; // День недели
+        int32 number_in_day = 2; // Номер занятия в дне
+        WeekParity week_parity = 3; // Четность недели, в которой проходит это занятие
+    }
+}
