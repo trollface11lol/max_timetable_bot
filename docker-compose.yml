@@ -33,7 +33,7 @@ services:
     networks:
       - max_net
 
-  postgres:
+  postgres_max:
     image: postgres:15
     container_name: postgres_max
     restart: always
@@ -44,7 +44,7 @@ services:
     ports:
       - "9005:5432"
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - ./data/postgres_max:/var/lib/postgresql/data
       - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
     networks:
       - max_net
