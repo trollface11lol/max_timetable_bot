@@ -10,4 +10,4 @@ echo "Running migrations"
 alembic upgrade head
 
 echo "Starting bot"
-exec python -m bot.main
+exec python -m main
